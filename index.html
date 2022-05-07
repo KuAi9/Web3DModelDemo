@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>three.js加载glb模型</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            background-color: rgb(153, 165, 155);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- <div class="sketchfab-embed-wrapper">
+        <iframe title="phoenix bird" frameborder="0" allowfullscreen mozallowfullscreen="true"
+            webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking
+            execution-while-out-of-viewport execution-while-not-rendered web-share width="1920" height="1080"
+            src="https://sketchfab.com/models/844ba0cf144a413ea92c779f18912042/embed"> </iframe>
+    </div> -->
+    <script type="module">
+        // 引入 three.js
+        import * as THREE from './three.js/build/three.module.js';
+        import { OrbitControls } from './three.js/examples/jsm/controls/OrbitControls.js';
+        import { GLTFLoader } from './three.js/examples/jsm/loaders/GLTFLoader.js';
+
+
+        // 创建相机
+        function createCamera() {
+            /**
+             *  new THREE.PerspectiveCamera 有四个基本参数, 分别是：fov, aspect, near, far
+             *  fov: 表示摄像机视锥体垂直视野角度, 最小值为0, 最大值为180, 默认值为50 ( 实际项目中一般都定义45, 因为45最接近人正常睁眼角度 )
+             *  aspect: 表示摄像机视锥体长宽比, 默认长宽比为 1, ( 实际项目中使用的是屏幕的宽高比 )
+             *  near: 表示摄像机视锥体近端面，这个值默认为 0.1，(实际项目中都会设置为 1)
+             *  far: 表示摄像机视锥体远端面，默认为 2000，这个值可以是无限的，说的简单点就是我们视觉所能看到的最远距离
+            */
+            const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000);
+            return camera;
+        }
+
+        // 创建相机控制器
+        function createControls(camera, renderer) {
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.minDistance = 2;
+            controls.maxDistance = 10;
+            controls.target.set(0, 0, 0);
+            controls.update();
+            return controls;
+        }
+
+
+        // 创建场景
+        function createScene() {
+            return new THREE.Scene();
+        }
+
+        // 创建渲染器
+        function createRenderer() {
+            const option = {
+                // 是否开启反锯齿 
+                antialias: true,
+                // 背景色是否透明
+                alpha: true
+            };
+            const renderer = new THREE.WebGLRenderer(option)
+
+            // 设置渲染器颜色 : 若设了透明, 只需要使用CSS更改容器颜色即可
+            // 若要单独设置颜色, 可以使用 setClearColor
+            // renderer.setClearColor(new THREE.Color(0X99A59B))
+
+            // 设置渲染器输出 canvas 画布大小
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            return renderer;
+        }
+
+        // 引入并加载模型
+        async function createModel() {
+            // 创建模型解析器，并设置模型所在路径
+            const loader = new GLTFLoader().setPath('models/airport/');
+            // 加载模型文件
+            return await new Promise((resolve) => {
+                loader.load('airport.glb', function (model) {
+                    // model 为 模型文件 解析后的 JS对象
+
+                    // 设置模型缩放比例 
+                    model.scene.scale.set(0.003, 0.003, 0.003);
+
+                    // 旋转和移动模型 ( 为了让模型加载为合适的姿势和位置 )
+                    // 相对 X 轴旋转弧度 
+                    model.scene.rotation.x = 0.5 * Math.PI;
+                    // 相对 Z 轴旋转弧度 
+                    model.scene.rotation.z = 0.6 * Math.PI;
+                    // 相对 Y轴旋转弧度 
+                    model.scene.rotation.y = -0.3 * Math.PI;
+
+                    // 模型 X轴位置
+                    model.scene.position.x = 0;
+                    // 模型 Z轴位置
+                    model.scene.position.z = 0;
+                    // 模型 Y轴位置
+                    model.scene.position.y = 0;
+
+
+
+
+                    // 打光 还原模型材质 (不然模型可能是黑色的)
+                    model.scene.traverse(function (node) {
+                        if (node.isMesh) {
+                            // 取消视椎体剔除
+                            node.frustumCulled = false;
+                            //模型阴影
+                            node.castShadow = true;
+                            //模型自发光
+                            node.material.emissive = node.material.color;
+                            node.material.emissiveMap = node.material.map;
+                        }
+                    });
+
+                    // 创建 动画混合器对象 AnimationMixer
+                    const mixer = new THREE.AnimationMixer(model.scene);
+                    // 调节 动画播放速度 默认1
+                    // mixer.timeScale = 0.5
+
+                    // 将第 1 帧动画 设为 动画剪辑对象
+                    const clip = model.animations[0];
+
+                    // 使用 动画剪辑对象 和 动画混合器对象 创建 AnimationAction 对象
+                    const action = mixer.clipAction(clip)
+
+                    // 播放模型动画
+                    action.play();
+                    // 加载完毕，改变 Promise 状态
+                    resolve({ model, mixer })
+                });
+            })
+        }
+
+
+        async function init() {
+            // 初始化容器
+            const container = document.createElement('div');
+            document.body.appendChild(container);
+
+            // 相机
+            let camera = createCamera();
+
+            // 场景
+            let scene = createScene();
+
+            // 渲染器
+            let renderer = createRenderer();
+
+            let clock = new THREE.Clock();
+
+            // 模型 与 动画混合器对象
+            let { model, mixer } = await createModel();
+
+            // 将模型添加到场景中
+            scene.add(model.scene);
+
+            //  调用渲染函数（初次渲染）
+            render(camera, scene, renderer, mixer, clock);
+
+            // 相机控制器
+            let controls = createControls(camera, renderer);
+
+            // 相机改变时，重新渲染
+            controls.addEventListener('change', () => {
+                //  调用渲染函数
+                render(camera, scene, renderer, mixer, clock);
+            });
+
+
+            // 将渲染器输出画布放入容器
+            container.appendChild(renderer.domElement);
+
+            // fly
+            // fly(camera, scene, model, renderer)
+
+            rotate(camera, scene, model, renderer)
+
+        }
+
+        function render(camera, scene, renderer, mixer, clock) {
+            if (mixer) {
+                const delta = clock.getDelta();     // 获取自上次调用的时间差
+                mixer.update(delta)
+            }
+            renderer.render(scene, camera);
+            requestAnimationFrame(() => {
+                render(camera, scene, renderer, mixer, clock)
+            })
+        };
+
+
+
+
+        function rotate(camera, scene, model, renderer) {
+            requestAnimationFrame(() => {
+                rotate(camera, scene, model, renderer)
+            });
+            // model.scene.rotation.y += 0.01;
+            // model.scene.rotation.x += 0.01;
+            // model.scene.rotation.z += 0.01;
+
+        }
+        function fly(camera, scene, model, renderer, state = 'down', timer = null) {
+            requestAnimationFrame(() => {
+                fly(camera, scene, model, renderer, state)
+            });
+
+
+            if (state === 'down') {
+                if (model.scene.position.x <= 0) {
+
+                    model.scene.position.x += 0.01;
+                    // model.scene.rotation.x -= 0.002 * Math.PI;
+
+                    model.scene.position.y += 0.005
+                    model.scene.rotation.y -= 0.002 * Math.PI
+
+                    model.scene.position.z += 0.003;
+                    model.scene.rotation.z -= 0.0008 * Math.PI;
+                }
+                else
+                    if (model.scene.position.x <= 1) {
+                        model.scene.position.x += 0.01;
+                        // model.scene.rotation.x -= 0.002 * Math.PI;
+
+                        model.scene.position.y -= 0.005
+                        model.scene.rotation.y -= 0.002 * Math.PI
+
+                        model.scene.position.z -= 0.003;
+                        model.scene.rotation.z -= 0.0008 * Math.PI;
+                    } else {
+                        state = 'up';
+                    }
+            }
+            if (state === 'up') {
+                if (model.scene.position.x > 1) {
+                    model.scene.position.x -= 0.01;
+                }
+                if (model.scene.position.x <= -1) {
+                    state = 'down';
+                }
+                else if (model.scene.position.x <= 0) {
+                    model.scene.position.x -= 0.01;
+                    // model.scene.rotation.x += 0.001 * Math.PI;
+
+                    model.scene.position.y += 0.008
+                    model.scene.rotation.y -= 0.008 * Math.PI
+
+
+                    model.scene.position.z += 0.002;
+                    model.scene.rotation.z += 0.003 * Math.PI;
+
+                } else
+                    if (model.scene.position.x <= 1) {
+                        model.scene.position.x -= 0.01;
+                        // model.scene.rotation.x += 0.001 * Math.PI;
+
+                        model.scene.position.y -= 0.008
+                        model.scene.rotation.y -= 0.008 * Math.PI
+
+                        model.scene.position.z -= 0.002;
+                        model.scene.rotation.z -= 0.003 * Math.PI;
+                    }
+                // model.scene.position.x -= 0.01;
+                // model.scene.rotation.x -= 0.02;
+
+                // model.scene.position.y -= 0.008
+                // model.scene.rotation.y += 0.002
+
+                // model.scene.position.z -= 0.002;
+                // model.scene.rotation.z -= 0.01;
+                // if (model.scene.position.x <= 0) {
+
+                // }
+            }
+
+
+            renderer.render(scene, camera);
+
+
+        };
+        init();
+    </script>
+
+</body>
+
+</html>
