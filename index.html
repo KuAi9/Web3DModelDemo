@@ -14,12 +14,6 @@
 </head>
 
 <body>
-    <!-- <div class="sketchfab-embed-wrapper">
-        <iframe title="phoenix bird" frameborder="0" allowfullscreen mozallowfullscreen="true"
-            webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking
-            execution-while-out-of-viewport execution-while-not-rendered web-share width="1920" height="1080"
-            src="https://sketchfab.com/models/844ba0cf144a413ea92c779f18912042/embed"> </iframe>
-    </div> -->
     <script type="module">
         // 引入 three.js
         import * as THREE from './three.js/build/three.module.js';
@@ -79,22 +73,23 @@
         // 引入并加载模型
         async function createModel() {
             // 创建模型解析器，并设置模型所在路径
-            const loader = new GLTFLoader().setPath('models/airport/');
+            const loader = new GLTFLoader().setPath('models/');
             // 加载模型文件
             return await new Promise((resolve) => {
-                loader.load('airport.glb', function (model) {
+                loader.load('3d.glb', function (model) {
                     // model 为 模型文件 解析后的 JS对象
 
                     // 设置模型缩放比例 
-                    model.scene.scale.set(0.003, 0.003, 0.003);
+                    model.scene.scale.set(0.3, 0.3, 0.3);
 
                     // 旋转和移动模型 ( 为了让模型加载为合适的姿势和位置 )
+
                     // 相对 X 轴旋转弧度 
-                    model.scene.rotation.x = 0.5 * Math.PI;
-                    // 相对 Z 轴旋转弧度 
-                    model.scene.rotation.z = 0.6 * Math.PI;
+                    model.scene.rotation.x = 0 * Math.PI;
                     // 相对 Y轴旋转弧度 
-                    model.scene.rotation.y = -0.3 * Math.PI;
+                    model.scene.rotation.y = 1.2 * Math.PI;
+                    // 相对 Z 轴旋转弧度 
+                    model.scene.rotation.z = 0.5 * Math.PI;
 
                     // 模型 X轴位置
                     model.scene.position.x = 0;
@@ -122,16 +117,17 @@
                     // 创建 动画混合器对象 AnimationMixer
                     const mixer = new THREE.AnimationMixer(model.scene);
                     // 调节 动画播放速度 默认1
-                    // mixer.timeScale = 0.5
-
-                    // 将第 1 帧动画 设为 动画剪辑对象
-                    const clip = model.animations[0];
-
-                    // 使用 动画剪辑对象 和 动画混合器对象 创建 AnimationAction 对象
-                    const action = mixer.clipAction(clip)
-
-                    // 播放模型动画
-                    action.play();
+                    mixer.timeScale = 0.8;
+                    // 遍历模型动画列表
+                    model.animations.forEach(clip => {
+                        const action = mixer.clipAction(clip);
+                        //设置只播放一次
+                        action.setLoop(THREE.LoopOnce);
+                        //暂停在最后一帧播放的状态
+                        action.clampWhenFinished = true;
+                        // 开始播放
+                        action.play();
+                    });
                     // 加载完毕，改变 Promise 状态
                     resolve({ model, mixer })
                 });
@@ -180,7 +176,7 @@
             // fly
             // fly(camera, scene, model, renderer)
 
-            rotate(camera, scene, model, renderer)
+            // rotate(camera, scene, model, renderer)
 
         }
 
@@ -199,9 +195,9 @@
 
 
         function rotate(camera, scene, model, renderer) {
-            requestAnimationFrame(() => {
-                rotate(camera, scene, model, renderer)
-            });
+            // requestAnimationFrame(() => {
+            //     rotate(camera, scene, model, renderer)
+            // });
             // model.scene.rotation.y += 0.01;
             // model.scene.rotation.x += 0.01;
             // model.scene.rotation.z += 0.01;
